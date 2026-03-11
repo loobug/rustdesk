@@ -1765,13 +1765,23 @@ class _KeyboardMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     var ffiModel = Provider.of<FfiModel>(context);
     if (!ffiModel.keyboard) return Offstage();
-    toolbarToggles() => toolbarKeyboardToggles(ffi)
-        .map((e) => CkbMenuButton(
-            value: e.value, onChanged: e.onChanged, child: e.child, ffi: ffi))
-        .toList();
+    toolbarToggles() {
+      final toggles = toolbarKeyboardToggles(ffi)
+          .map((e) => CkbMenuButton(
+              value: e.value,
+              onChanged: e.onChanged,
+              child: e.child,
+              ffi: ffi) as Widget)
+          .toList();
+      if (toggles.isNotEmpty) {
+        toggles.add(Divider());
+      }
+      return toggles;
+    }
+
     return _IconSubmenuButton(
         tooltip: 'Keyboard Settings',
-        svg: "assets/keyboard.svg",
+        svg: "assets/keyboard_mouse.svg",
         ffi: ffi,
         color: _ToolbarTheme.blueColor,
         hoverColor: _ToolbarTheme.hoverBlueColor,
@@ -1851,8 +1861,18 @@ class _KeyboardMenu extends StatelessWidget {
           continue;
         }
 
-        if (pi.isWayland && mode.key != kKeyMapMode) {
-          continue;
+        if (pi.isWayland) {
+          // Legacy mode is hidden on desktop control side because dead keys
+          // don't work properly on Wayland. When the control side is mobile,
+          // Legacy mode is used automatically (mobile always sends Legacy events).
+          if (mode.key == kKeyLegacyMode) {
+            continue;
+          }
+          // Translate mode requires server >= 1.4.6.
+          if (mode.key == kKeyTranslateMode &&
+              versionCmp(pi.version, '1.4.6') < 0) {
+            continue;
+          }
         }
 
         var text = translate(mode.menu);
